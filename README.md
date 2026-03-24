@@ -142,7 +142,7 @@ python tester.py test/phase1.rpn -m
 python tester.py test/phase1.rpn -t -m --history
 
 # Sem cores ANSI (para redirecionar a saída)
-python tester.py test/phase1.rpn --no-color > resultado.rpn
+python tester.py test/phase1.rpn --no-color > resultado.txt
 ```
 
 Exemplo de saída:
