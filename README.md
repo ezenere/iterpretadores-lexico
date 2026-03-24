@@ -123,10 +123,52 @@ Saindo...
 
 #### Tester (`tester.py`)
 
-Parseia o arquivo, exibe todos os tokens e em seguida executa, imprimindo memória e histórico:
+Executa o arquivo linha a linha, exibindo cada expressão com seu resultado formatado e as variáveis em memória ao final:
 
 ```bash
+# Execução padrão (resultados + memória)
 python tester.py test/phase1.txt
+
+# Com árvore de tokens detalhada
+python tester.py test/phase1.txt -t
+
+# Com histórico completo de RES
+python tester.py test/phase1.txt --history
+
+# Exibir memória explicitamente
+python tester.py test/phase1.txt -m
+
+# Tudo junto
+python tester.py test/phase1.txt -t -m --history
+
+# Sem cores ANSI (para redirecionar a saída)
+python tester.py test/phase1.txt --no-color > resultado.txt
+```
+
+Exemplo de saída:
+
+```
+════════════════════════════════════════════════════════════
+  Execução (4 expressões)
+════════════════════════════════════════════════════════════
+
+  1 │ (3 4 +)
+    │ = 7
+
+  2 │ (3.14 PI)
+    │ = 3.14
+
+  3 │ ((PI) 2 *)
+    │ = 6.28
+
+  4 │ (0 RES)
+    │ = 6.28
+
+════════════════════════════════════════════════════════════
+  Variáveis em Memória
+────────────────────────────────────────────────────────────
+  PI │ 3.14
+════════════════════════════════════════════════════════════
 ```
 
 #### Translator (`translator.py`)
