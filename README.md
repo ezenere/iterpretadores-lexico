@@ -36,9 +36,9 @@ As expressões seguem o formato RPN `(A B op)`, onde `A` e `B` são números rea
 Expressões podem ser aninhadas sem limite de profundidade:
 
 ```
-(3 (4 5 +) *)            → 3 * (4+5) = 27
-((2 3 +) (4 1 -) *)      → (2+3) * (4-1) = 15
-((2 3 +) ((4 5 *) 2 /) +) → (2+3) + ((4*5)/2) = 15
+(3 (4 5 +) *)               → 3 * (4+5) = 27
+((2 3 +) (4 1 -) *)         → (2+3) * (4-1) = 15
+((2 3 +) ((4 5 *) 2 /) +)   → (2+3) + ((4*5)/2) = 15
 ```
 
 ### Comandos Especiais
@@ -127,22 +127,22 @@ Executa o arquivo linha a linha, exibindo cada expressão com seu resultado form
 
 ```bash
 # Execução padrão (resultados + memória)
-python tester.py test/phase1.txt
+python tester.py test/phase1.rpn
 
 # Com árvore de tokens detalhada
-python tester.py test/phase1.txt -t
+python tester.py test/phase1.rpn -t
 
 # Com histórico completo de RES
-python tester.py test/phase1.txt --history
+python tester.py test/phase1.rpn --history
 
 # Exibir memória explicitamente
-python tester.py test/phase1.txt -m
+python tester.py test/phase1.rpn -m
 
 # Tudo junto
-python tester.py test/phase1.txt -t -m --history
+python tester.py test/phase1.rpn -t -m --history
 
 # Sem cores ANSI (para redirecionar a saída)
-python tester.py test/phase1.txt --no-color > resultado.txt
+python tester.py test/phase1.rpn --no-color > resultado.rpn
 ```
 
 Exemplo de saída:
@@ -176,7 +176,7 @@ Exemplo de saída:
 Parseia o arquivo e imprime o código Assembly ARMv7 gerado no terminal:
 
 ```bash
-python translator.py test/phase1.txt
+python translator.py test/phase1.rpn
 ```
 
 ## Testes
@@ -185,26 +185,26 @@ A pasta `test/` contém arquivos de teste organizados por fase:
 
 ```
 test/
-├── phase1.txt    # Operações básicas, aninhamento, MEM, RES
-├── phase2.txt    # Testes adicionais
-└── phase3.txt    # Testes avançados
+├── phase1.rpn    # Operações básicas, aninhamento, MEM, RES
+├── phase2.rpn    # Testes adicionais
+└── phase3.rpn    # Testes avançados
 ```
 
 ### Executando os testes
 
 ```bash
 # Rodar os testes da Fase 1
-python main.py -r test/phase1.txt
+python main.py -r test/phase1.rpn
 
 # Ver os tokens parseados da Fase 1
-python main.py -p test/phase1.txt
+python main.py -p test/phase1.rpn
 
 # Traduzir a Fase 1 para Assembly
-python main.py -t test/phase1.txt -o phase1.s
+python main.py -t test/phase1.rpn -o phase1.s
 
 # Usando as ferramentas standalone
-python tester.py test/phase1.txt
-python translator.py test/phase1.txt
+python tester.py test/phase1.rpn
+python translator.py test/phase1.rpn
 ```
 
 ## Arquitetura
