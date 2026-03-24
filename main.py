@@ -1,6 +1,6 @@
-PARENTHESIS = 1
-PARENTHESIS_L = 1
-PARENTHESIS_R = 2
+PARENTHESES = 1
+PARENTHESES_L = 1
+PARENTHESES_R = 2
 
 MATH = 2
 MATH_PLUS = 1
@@ -209,7 +209,7 @@ def state_parentheses(expr, index, tokens, parentheses):
         return state_parentheses(expr, index + 1, tokens, parentheses)
 
     if expr[index] == '(':
-        tokens.append(Token(PARENTHESIS,PARENTHESIS_L))
+        tokens.append(Token(PARENTHESES,PARENTHESES_L))
         return state_parentheses(expr, index + 1, tokens, parentheses + 1)
 
     if expr[index] in "0123456789":
@@ -231,11 +231,11 @@ def state_parentheses(expr, index, tokens, parentheses):
         return state_single_operand(expr, index + 1, tokens, parentheses, expr[index])
     
     if expr[index] == ')' and parentheses > 1:
-        tokens.append(Token(PARENTHESIS, PARENTHESIS_R))
+        tokens.append(Token(PARENTHESES, PARENTHESES_R))
         return state_parentheses(expr, index + 1, tokens, parentheses - 1)
 
     if expr[index] == ')' and parentheses == 1:
-        tokens.append(Token(PARENTHESIS, PARENTHESIS_R))
+        tokens.append(Token(PARENTHESES, PARENTHESES_R))
         return state_end(expr, index + 1, tokens)
     
     return False
@@ -258,8 +258,8 @@ def parse_expression_list(expressions):
 def display_parsed(parsed):
     espacos = ''
     for token in parsed:
-        if token.kind == PARENTHESIS:
-            if token.value == PARENTHESIS_L:
+        if token.kind == PARENTHESES:
+            if token.value == PARENTHESES_L:
                 print(f'{espacos}(')
                 espacos = espacos + '  '
             else:
@@ -339,7 +339,7 @@ def execute_expression(expression, memory, history):
     pile = []
     for i in range(len(expression)):
         token = expression[i]
-        if token.kind == PARENTHESIS:
+        if token.kind == PARENTHESES:
             continue
         if token.kind == INT or token.kind == FLOAT:
             pile.append(token.value)
