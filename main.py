@@ -433,18 +433,21 @@ parsed = parse_expression_list([
     # "((1 RES) R)",
     # "(R)",
 
-    "(U)",
-    "((1 U +) V)",
-    "(V)",
-    "(100 RES)",
-    "((1 0 /) A)",
-    "((1 0 //) B)",
-    "((1 0 %) C)",
-    "((0 0 ^) D)",
-    "((2 -3 +) E)",
-    "((2 3 ^) (4 5 ^) +)",
-    "((1 RES) (999 RES) +)",
-    "(-20 MENOR)"
+    # "(U)",
+    # "((1 U +) V)",
+    # "(V)",
+    # "(100 RES)",
+    # "((1 0 /) A)",
+    # "((1 0 //) B)",
+    # "((1 0 %) C)",
+    # "((0 0 ^) D)",
+    # "((2 -3 +) E)",
+    # "((2 3 ^) (4 5 ^) +)",
+    # "((1 RES) (999 RES) +)",
+    # "(-20 MENOR)"
+
+    "(1 A)",
+    "((A 7 +) A)"
 ])
 
 memory, history = execute(parsed)
@@ -490,6 +493,11 @@ get_two_numbers = """
     BL  memory_pop
 """
 
+res_keyword = """
+    BL  rescue
+    BL  memory_push
+"""
+
 def math_operation(operation):
     diretas = {
         MATH_PLUS: "ADD",
@@ -504,23 +512,16 @@ def math_operation(operation):
 """
     elif operation == MATH_INT_DIV:
         return """
-    VDIV.F64        d2, d0, d1       @ d2 = valor da divisão float
-    VCVT.S32.F64    s0, d2           @ s0 = trunca pra inteiro 32 bits
-    VCVT.F64.S32    d0, s0           @ d0 = volta pra double 
+    BL  fintd
 """
     elif operation == MATH_MODULLUS:
         return """
-    VDIV.F64        d2, d0, d1       @ d2 = 3.5
-    VCVT.S32.F64    s0, d2           @ s0 = 3 (trunca)
-    VCVT.F64.S32    d2, s0           @ d2 = 3.0
-    VMUL.F64        d2, d2, d1       @ d2 = 3.0 * 2.0 = 6.0
-    VSUB.F64        d0, d0, d2       @ d0 = 7.0 - 6.0 = 1.0
+    BL  fmod
 """
     elif operation == MATH_EXPONENTIAL:
         return """
     BL  fpow
 """
-
 
 def set_value_on_address(address):
     return f"""
@@ -583,9 +584,7 @@ def translate_to_arm_v7(parsed):
 
             if token.kind == KEYWORD:
                 if(token.value == KEYWORD_RES):
-                    # TODO: Volta nos valores da memória (sem limitação)
-                    middle_code += "@TODO:::::::::::"
-                    # pile.append(history.get(pile.pop()))
+                    middle_code += res_keyword
 
     return f"""
 @ Endereço base da memória de pilha de resultados
@@ -624,6 +623,32 @@ memory_pop:
     SUB     r11, r11, #8
     VLDR    d0, [r11]
     BX      lr
+
+fintd:
+    VDIV.F64        d2, d0, d1       @ d2 = valor da divisão float
+    VCVT.S32.F64    s0, d2           @ s0 = trunca pra inteiro 32 bits
+    VCVT.F64.S32    d0, s0           @ d0 = volta pra double
+    BX              lr
+
+fmod:
+    VDIV.F64        d2, d0, d1
+    VCVT.S32.F64    s0, d2
+    VCVT.F64.S32    d2, s0
+    VMUL.F64        d2, d2, d1
+    VSUB.F64        d0, d0, d2
+    BX              lr
+
+rescue:
+    PUSH            {{lr}}
+    BL              memory_pop
+    POP             {{lr}}
+    VCVT.S32.F64    s0, d0
+    VMOV            r1, s0
+    MOV             r0, r11
+    LSL             r1, r1, #3  @ Multiplica por 8 (desloca 3 bits para a esquerda, dá no mesmo)
+    SUB             r0, r0, r1
+    VLDR            d0, [r0]
+    BX              lr
 
 fpow:
     VMOV.F64     d2, d0          @ d2 = base (salva)
