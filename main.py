@@ -1,3 +1,5 @@
+import struct
+
 PARENTHESES = 1
 PARENTHESES_L = 1
 PARENTHESES_R = 2
@@ -35,7 +37,7 @@ def state_end(expr, index, tokens):
 
     return False
 
-def state_int_div_operand(expr, index, tokens, parentheses, token):
+def state_int_div_operand(expr, index, tokens, parentheses):
     if index == len(expr):
         return False
 
@@ -50,7 +52,7 @@ def state_single_operand(expr, index, tokens, parentheses, token):
         return False
 
     if expr[index] == '/':
-        return state_int_div_operand(expr, index + 1, tokens, parentheses, token+'/')
+        return state_int_div_operand(expr, index + 1, tokens, parentheses)
 
     if expr[index] in " )" and token == '+':
         tokens.append(Token(MATH, MATH_PLUS))
@@ -448,3 +450,174 @@ parsed = parse_expression_list([
 memory, history = execute(parsed)
 
 print(memory, history)
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TRANSLATION TO ARMv7
+
+def number_to_arm_v7(number):
+    raw = struct.pack('>d', 2.0)
+    hi, lo = struct.unpack(">II", raw)
+
+    return f"""
+    print(f"    @ Carregar {number} em d0 (IEEE 754: 0x{hi:08X}{lo:08X})")
+    @ Adicionar valor de 64 bits em r0, r1:
+    @ primeira parte do d0
+    LDR     r0, =0x{lo:08X}
+    @ segunda parte do d0
+    LDR     r1, =0x{hi:08X}
+"""
+
+set_d0_as_r0_r1 = """
+    @ Mover o valor para d0
+    @ Integralizar o valor r0, r1 em d0
+    VMOV d0, r0, r1
+"""
+
+add_to_memory_list = f"""
+    @ Adicionar para a memória
+    BL   memory_push
+"""
+
+get_one_number = """
+    @ Coloca a memória em d0
+    BL   memory_pop
+"""
+
+get_two_numbers = """
+    @ Coloca a memória em D0
+    BL   memory_pop
+
+    @ Coloca o d0 em d1
+    VMOV.F64 d1, d0
+
+    @ Coloca a outra memória d0
+    BL  memory_pop
+"""
+
+def math_operation(operation):
+    return """
+    
+"""
+
+def set_value_on_address(address):
+    return f"""
+    @ Colocar o valor do endereço no registrador r0
+    LDR     r0, =0x{address:08X}
+    @ Mover o valor do registrador d0 para o endereço em r0 (8 bytes)
+    VSTR    d0, [r0]
+"""
+
+def get_value_on_address(address):
+    return f"""
+    @ Colocar o valor do endereço no registrador r0
+    LDR     r0, =0x{address:08X}
+    @ Ler o valor do edereço em r0 para d0 (8 bytes)
+    VLDR    d0, [r0]
+"""
+
+def translate_to_arm_v7(parsed):
+    middle_code = ""
+    variable_address = 0x00010000
+    variables = {}
+
+    for expression in parsed:
+        pile = []
+        for i in range(len(expression)):
+            token = expression[i]
+            if token.kind == PARENTHESES:
+                continue
+            if token.kind == INT or token.kind == FLOAT:
+                pile.append(token.value)
+            if token.kind == MATH:
+                a = pile.pop()
+                b = pile.pop()
+                middle_code += number_to_arm_v7(a)
+                middle_code += set_d0_as_r0_r1
+                middle_code += add_to_memory_list
+                middle_code += number_to_arm_v7(b)
+                middle_code += set_d0_as_r0_r1
+                middle_code += add_to_memory_list
+                middle_code += math_operation(token.value)
+            if token.kind == VARIABLE:
+                if i == len(expression) - 2: # Penultimo item, significa que é uma atribuição ou uma leitura. O ultimo token sempre é ")".
+                    if len(pile) == 1:
+                        # Tem item na pilha da expressão, então é atribuição 
+                        if token.value not in variables:
+                            variable_address += 8
+                            variables[token.value] = variable_address
+
+                        current_address = variables[token.value]
+                        middle_code += number_to_arm_v7(a)
+                        middle_code += set_d0_as_r0_r1
+                        middle_code += add_to_memory_list
+                        middle_code += set_value_on_address(current_address)
+                    else:
+                        # Não tem item na pilha de atribuição, então é apenas leitura
+                        # Em assembly, se a variável existir, ela será apenas inserida na pilha de resultados, 
+                        # se não existir, o valor 0 é inserido na pilha.
+                        if token.value not in variables:
+                            middle_code += number_to_arm_v7(0)
+                        else:
+                            middle_code += get_value_on_address(variables[token.value])
+                        middle_code += add_to_memory_list
+                else:
+                    if token.value not in variables:
+                        middle_code += number_to_arm_v7(0)
+                    else:
+                        middle_code += get_value_on_address(variables[token.value])
+                    middle_code += add_to_memory_list
+
+            if token.kind == KEYWORD:
+                if(token.value == KEYWORD_RES):
+                    # Volta nos valores da memória (sem limitação)
+                    pile.append(history.get(pile.pop()))
+
+    return f"""
+@ Endereço base da memória de pilha de resultados
+.equ MEMORY_BASE, 0x10000000
+
+.text
+.global _start
+
+_start:
+    @ Configurar o coprocesssador para trabalhar com pontos flutuantes de 64 bits.
+    MRC     p15, 0, r0, c1, c0, 2
+    ORR     r0, r0, #(0xF << 20)
+    MCR     p15, 0, r0, c1, c0, 2
+    
+    @ Esperar a sincronização do CPU 
+    ISB
+
+    @ Habilita o controle de exceção do VFP
+    MOV r0, #(1 << 30)
+    VMSR FPEXC, r0
+
+    @ Habilitar a stack de valores de operadores e de memória
+    LDR     r12, =MEMORY_BASE
+
+    {middle_code}
+
+    halt:
+    B       halt
+
+memory_push:
+    VSTR    d0, [r11]
+    ADD     r11, r11, #8
+    BX      lr
+
+memory_pop:
+    SUB     r11, r11, #8
+    VLDR    d0, [r11]
+    BX      lr
+"""
