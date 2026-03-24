@@ -379,59 +379,59 @@ def execute(expressions):
     return memory.dict, history.heap
 
 parsed = parse_expression_list([
-    "(10 5 +)",
-    "(A)",
-    "((10 5 +) A)",
-    "(A)",
-    "((2 3 +) (4 1 -) *)",
-    "((2.5 4 *) (3 2 /) +)",
-    "(((2 3 +) (4 1 -) *) B)",
-    "((B 5 +) C)",
-    "(C)",
-    "(1 RES)",
-    "(3 RES)",
-    "((1 RES) (2 RES) +)",
-    "((17 5 %) D)",
-    "(D)",
-    "((2 8 ^) E)",
-    "(E)",
-    "((7 2 //) F)",
-    "(F)",
-    "((9 2 /) G)",
-    "(G)",
-    "(((1 2 +) (3 4 +) +) H)",
-    "((H A +) I)",
-    "(I)",
-    "((2 RES) (5 RES) *)",
-    "(((1 RES) (A B +) *) J)",
-    "(J)",
+    # "(10 5 +)",
+    # "(A)",
+    # "((10 5 +) A)",
+    # "(A)",
+    # "((2 3 +) (4 1 -) *)",
+    # "((2.5 4 *) (3 2 /) +)",
+    # "(((2 3 +) (4 1 -) *) B)",
+    # "((B 5 +) C)",
+    # "(C)",
+    # "(1 RES)",
+    # "(3 RES)",
+    # "((1 RES) (2 RES) +)",
+    # "((17 5 %) D)",
+    # "(D)",
+    # "((2 8 ^) E)",
+    # "(E)",
+    # "((7 2 //) F)",
+    # "(F)",
+    # "((9 2 /) G)",
+    # "(G)",
+    # "(((1 2 +) (3 4 +) +) H)",
+    # "((H A +) I)",
+    # "(I)",
+    # "((2 RES) (5 RES) *)",
+    # "(((1 RES) (A B +) *) J)",
+    # "(J)",
 
-    "(0)",
-    "(0.0)",
-    "(.5)",
-    "(0007)",
-    "(0007 0003 +)",
-    "((1 2 +) (3 4 +) +)",
-    "(((1 2 +) (3 4 +) +) X)",
-    "(X)",
-    "((X 2 ^) Y)",
-    "(Y)",
-    "((1 RES) (2 RES) +)",
-    "((3 RES) (1 RES) *)",
-    "((2.5 2 ^) Z)",
-    "(Z)",
-    "((10 3 %) M)",
-    "(M)",
-    "((10 3 //) N)",
-    "(N)",
-    "((10 3 /) O)",
-    "(O)",
-    "((((1 1 +) (2 2 +) +) ((3 3 +) (4 4 +) +) +) P)",
-    "(P)",
-    "((P X +) Q)",
-    "(Q)",
-    "((1 RES) R)",
-    "(R)",
+    # "(0)",
+    # "(0.0)",
+    # "(.5)",
+    # "(0007)",
+    # "(0007 0003 +)",
+    # "((1 2 +) (3 4 +) +)",
+    # "(((1 2 +) (3 4 +) +) X)",
+    # "(X)",
+    # "((X 2 ^) Y)",
+    # "(Y)",
+    # "((1 RES) (2 RES) +)",
+    # "((3 RES) (1 RES) *)",
+    # "((2.5 2 ^) Z)",
+    # "(Z)",
+    # "((10 3 %) M)",
+    # "(M)",
+    # "((10 3 //) N)",
+    # "(N)",
+    # "((10 3 /) O)",
+    # "(O)",
+    # "((((1 1 +) (2 2 +) +) ((3 3 +) (4 4 +) +) +) P)",
+    # "(P)",
+    # "((P X +) Q)",
+    # "(Q)",
+    # "((1 RES) R)",
+    # "(R)",
 
     "(U)",
     "((1 U +) V)",
@@ -452,34 +452,19 @@ memory, history = execute(parsed)
 print(memory, history)
 
 
-
-
-
-
-
-
-
-
-
-
-
 # TRANSLATION TO ARMv7
 
 def number_to_arm_v7(number):
-    raw = struct.pack('>d', 2.0)
+    raw = struct.pack('>d', float(number))
     hi, lo = struct.unpack(">II", raw)
 
     return f"""
-    print(f"    @ Carregar {number} em d0 (IEEE 754: 0x{hi:08X}{lo:08X})")
+    @ Carregar {number} em d0 (IEEE 754: 0x{hi:08X}{lo:08X})
     @ Adicionar valor de 64 bits em r0, r1:
     @ primeira parte do d0
     LDR     r0, =0x{lo:08X}
     @ segunda parte do d0
     LDR     r1, =0x{hi:08X}
-"""
-
-set_d0_as_r0_r1 = """
-    @ Mover o valor para d0
     @ Integralizar o valor r0, r1 em d0
     VMOV d0, r0, r1
 """
@@ -506,24 +491,47 @@ get_two_numbers = """
 """
 
 def math_operation(operation):
-    return """
+    diretas = {
+        MATH_PLUS: "ADD",
+        MATH_MINUS: "SUB",
+        MATH_TIMES: "MUL",
+        MATH_FLOAT_DIV: "DIV"
+    }
     
+    if operation in [MATH_PLUS, MATH_MINUS, MATH_TIMES, MATH_FLOAT_DIV]:
+        return f"""
+    V{diretas[operation]}.F64 d0, d0, d1
 """
+    elif operation == MATH_INT_DIV:
+        return """
+    VDIV.F64        d2, d0, d1       @ d2 = valor da divisão float
+    VCVT.S32.F64    s0, d2           @ s0 = trunca pra inteiro 32 bits
+    VCVT.F64.S32    d0, s0           @ d0 = volta pra double 
+"""
+    elif operation == MATH_MODULLUS:
+        return """
+    VDIV.F64        d2, d0, d1       @ d2 = 3.5
+    VCVT.S32.F64    s0, d2           @ s0 = 3 (trunca)
+    VCVT.F64.S32    d2, s0           @ d2 = 3.0
+    VMUL.F64        d2, d2, d1       @ d2 = 3.0 * 2.0 = 6.0
+    VSUB.F64        d0, d0, d2       @ d0 = 7.0 - 6.0 = 1.0
+"""
+    elif operation == MATH_EXPONENTIAL:
+        return """
+    BL  fpow
+"""
+
 
 def set_value_on_address(address):
     return f"""
-    @ Colocar o valor do endereço no registrador r0
-    LDR     r0, =0x{address:08X}
-    @ Mover o valor do registrador d0 para o endereço em r0 (8 bytes)
-    VSTR    d0, [r0]
+    LDR     r0, =0x{address:08X}    @ Colocar o valor do endereço no registrador r0
+    VSTR    d0, [r0]                @ Mover o valor do registrador d0 para o endereço em r0 (8 bytes)
 """
 
 def get_value_on_address(address):
     return f"""
-    @ Colocar o valor do endereço no registrador r0
-    LDR     r0, =0x{address:08X}
-    @ Ler o valor do edereço em r0 para d0 (8 bytes)
-    VLDR    d0, [r0]
+    LDR     r0, =0x{address:08X}    @ Colocar o valor do endereço no registrador r0
+    VLDR    d0, [r0]                @ Ler o valor do edereço em r0 para d0 (8 bytes)
 """
 
 def translate_to_arm_v7(parsed):
@@ -532,36 +540,31 @@ def translate_to_arm_v7(parsed):
     variables = {}
 
     for expression in parsed:
-        pile = []
         for i in range(len(expression)):
             token = expression[i]
             if token.kind == PARENTHESES:
                 continue
             if token.kind == INT or token.kind == FLOAT:
-                pile.append(token.value)
+                # Adiciona número na pilha de variáveis
+                middle_code += number_to_arm_v7(token.value)
+                middle_code += add_to_memory_list
+
             if token.kind == MATH:
-                a = pile.pop()
-                b = pile.pop()
-                middle_code += number_to_arm_v7(a)
-                middle_code += set_d0_as_r0_r1
-                middle_code += add_to_memory_list
-                middle_code += number_to_arm_v7(b)
-                middle_code += set_d0_as_r0_r1
-                middle_code += add_to_memory_list
+                middle_code += get_two_numbers
                 middle_code += math_operation(token.value)
+                middle_code += add_to_memory_list
             if token.kind == VARIABLE:
                 if i == len(expression) - 2: # Penultimo item, significa que é uma atribuição ou uma leitura. O ultimo token sempre é ")".
-                    if len(pile) == 1:
+                    if len(expression) > 3:
                         # Tem item na pilha da expressão, então é atribuição 
                         if token.value not in variables:
                             variable_address += 8
                             variables[token.value] = variable_address
 
                         current_address = variables[token.value]
-                        middle_code += number_to_arm_v7(a)
-                        middle_code += set_d0_as_r0_r1
-                        middle_code += add_to_memory_list
+                        middle_code += get_one_number
                         middle_code += set_value_on_address(current_address)
+                        middle_code += add_to_memory_list
                     else:
                         # Não tem item na pilha de atribuição, então é apenas leitura
                         # Em assembly, se a variável existir, ela será apenas inserida na pilha de resultados, 
@@ -580,8 +583,9 @@ def translate_to_arm_v7(parsed):
 
             if token.kind == KEYWORD:
                 if(token.value == KEYWORD_RES):
-                    # Volta nos valores da memória (sem limitação)
-                    pile.append(history.get(pile.pop()))
+                    # TODO: Volta nos valores da memória (sem limitação)
+                    middle_code += "@TODO:::::::::::"
+                    # pile.append(history.get(pile.pop()))
 
     return f"""
 @ Endereço base da memória de pilha de resultados
@@ -604,7 +608,7 @@ _start:
     VMSR FPEXC, r0
 
     @ Habilitar a stack de valores de operadores e de memória
-    LDR     r12, =MEMORY_BASE
+    LDR     r11, =MEMORY_BASE
 
     {middle_code}
 
@@ -620,4 +624,28 @@ memory_pop:
     SUB     r11, r11, #8
     VLDR    d0, [r11]
     BX      lr
+
+fpow:
+    VMOV.F64     d2, d0          @ d2 = base (salva)
+    VCVT.S32.F64 s0, d1          @ s0 = expoente como inteiro
+    VMOV         r4, s0          @ r4 = contador
+
+    @ d0 = 1.0 (acumulador, começa em 1 pq 1 * base * base... = base^n)
+    LDR          r0, =0x00000000
+    LDR          r1, =0x3FF00000
+    VMOV         d0, r0, r1
+
+fpow_loop:
+    CMP          r4, #0
+    BLE          fpow_done      @ volta quando a comparação retornar <= 0 (para casos com expoente negativo)
+    VMUL.F64     d0, d0, d2     @ d0 = d0 * base
+    SUB          r4, r4, #1
+    B            fpow_loop
+
+fpow_done:
+    BX           lr
 """
+
+
+
+print(translate_to_arm_v7(parsed))
