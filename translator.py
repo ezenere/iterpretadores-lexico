@@ -39,21 +39,15 @@ pegarDoisNumeros = """
 """
 
 def keywordRES(nRES):
-    data = f"""
-    LDR             r0, ={nRES}
-    SUB             r1, r1, r0
-""" if nRES > 0 else ""
-
     return f"""
     BL              memory_pop
     VCVT.S32.F64    s0, d0
     VMOV            r1, s0
-    {data}
+    ADD             r1, r1, #{1 + nRES}
     MOV             r0, r11
     LSL             r1, r1, #3  @ Multiplica por 8 (desloca 3 bits para a esquerda, dá no mesmo)
     SUB             r0, r0, r1
     VLDR            d0, [r0]
-    BX              lr
     BL  memory_push
 """
 
