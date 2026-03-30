@@ -243,10 +243,10 @@ O interpretador foi validado com mais de 100 testes cobrindo:
 - Fibonacci e cascata quadrática como "programas"
 
 ## Dados
-Instituição: Pontifícia Universidade Católica do Paraná
-Disciplina: Construção de Interpretadores
-Professor: Frank Alcantara
-Aluno: Eduardo Zenere de Oliveira - ezenere
+- Instituição: Pontifícia Universidade Católica do Paraná
+- Disciplina: Construção de Interpretadores
+- Professor: Frank Alcantara
+- Aluno: Eduardo Zenere de Oliveira - ezenere
 
 
 ## Licença
