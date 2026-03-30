@@ -1,3 +1,4 @@
+# Constantes que representam os valores dos tokens
 PARENTHESES = 1
 PARENTHESES_L = 1
 PARENTHESES_R = 2
@@ -21,6 +22,7 @@ VARIABLE = 6
 
 OPERATION = 7
 
+# Classe de tokens
 class Token:
     def __init__(self, kind, value):
         self.kind = kind

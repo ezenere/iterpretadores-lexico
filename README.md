@@ -242,6 +242,13 @@ O interpretador foi validado com mais de 100 testes cobrindo:
 - RPN flat e aninhado
 - Fibonacci e cascata quadrática como "programas"
 
+## Dados
+Instituição: Pontifícia Universidade Católica do Paraná
+Disciplina: Construção de Interpretadores
+Professor: Frank Alcantara
+Aluno: Eduardo Zenere de Oliveira - ezenere
+
+
 ## Licença
 
 Este projeto é de uso acadêmico.

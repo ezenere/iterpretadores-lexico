@@ -24,7 +24,7 @@ class History:
             return 0.0
         return self.heap[-(index + 1)]
 
-def execute_math(v1, v2, op):
+def executarMatematica(v1, v2, op):
     if op == MATH_PLUS:
         data = v1 + v2
     if op == MATH_MINUS:
@@ -41,7 +41,7 @@ def execute_math(v1, v2, op):
         data = v1 ** v2
     return data
 
-def execute_expression(expression, memory, history):
+def executarExpressao(expression, memory, history):
     pile = []
     for i in range(len(expression)):
         token = expression[i]
@@ -52,7 +52,7 @@ def execute_expression(expression, memory, history):
         if token.kind == MATH:
             a = pile.pop()
             b = pile.pop()
-            result = execute_math(b, a, token.value)
+            result = executarMatematica(b, a, token.value)
             pile.append(result)
         if token.kind == VARIABLE:
             if i == len(expression) - 2:
@@ -73,11 +73,11 @@ def execute_expression(expression, memory, history):
     if len(pile) > 0:
         history.add(pile.pop())
 
-def execute(expressions):
+def executar(expressions):
     memory = Memory()
     history = History()
 
     for expression in expressions:
-        execute_expression(expression, memory, history)
+        executarExpressao(expression, memory, history)
 
     return memory.dict, history.heap

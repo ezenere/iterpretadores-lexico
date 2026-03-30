@@ -1,246 +1,268 @@
+# Importar itens comuns
 from common import *
 
-def state_comment(expr, index, tokens):
+def estadoComentario(expr, index, tokens):
     if index == len(expr):
         return tokens
     
-    return state_comment(expr, index + 1, tokens)
+    return estadoComentario(expr, index + 1, tokens)
 
-def state_end(expr, index, tokens):
+def estadoFim(expr, index, tokens):
     if index == len(expr):
         return tokens
     
     if expr[index] == ' ':
-        return state_end(expr, index + 1, tokens)
+        return estadoFim(expr, index + 1, tokens)
     
     if expr[index] == '#':
-        return state_comment(expr, index, tokens)
+        return estadoComentario(expr, index, tokens)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_int_div_operand(expr, index, tokens, parentheses):
+def estadoOperadorDivisaoInteira(expr, index, tokens, parentheses):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] in " )":
         tokens.append(Token(MATH, MATH_INT_DIV))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_single_operand(expr, index, tokens, parentheses, token):
+def estadoOperadorUnico(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] == '/':
-        return state_int_div_operand(expr, index + 1, tokens, parentheses)
+        return estadoOperadorDivisaoInteira(expr, index + 1, tokens, parentheses)
 
     if expr[index] in " )" and token == '+':
         tokens.append(Token(MATH, MATH_PLUS))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     if expr[index] in " )" and token == '-':
         tokens.append(Token(MATH, MATH_MINUS))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     if expr[index] in " )" and token == '*':
         tokens.append(Token(MATH, MATH_TIMES))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     if expr[index] in " )" and token == '/':
         tokens.append(Token(MATH, MATH_FLOAT_DIV))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     if expr[index] in " )" and token == '%':
         tokens.append(Token(MATH, MATH_MODULLUS))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     if expr[index] in " )" and token == '^':
         tokens.append(Token(MATH, MATH_EXPONENTIAL))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_float_dot(expr, index, tokens, parentheses, token):
+def estadoPonto(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] in "0123456789":
         token += expr[index]
-        return state_float(expr, index + 1, tokens, parentheses, token)
+        return estadoPontoFlutuante(expr, index + 1, tokens, parentheses, token)
     
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_float(expr, index, tokens, parentheses, token):
+def estadoPontoFlutuante(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] in "0123456789":
         token += expr[index]
-        return state_float(expr, index + 1, tokens, parentheses, token)
+        return estadoPontoFlutuante(expr, index + 1, tokens, parentheses, token)
 
     if expr[index] in ' )':
         tokens.append(Token(FLOAT, float(token)))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_int(expr, index, tokens, parentheses, token):
+def estadoInteiro(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] in "0123456789":
         token += expr[index]
-        return state_int(expr, index + 1, tokens, parentheses, token)
+        return estadoInteiro(expr, index + 1, tokens, parentheses, token)
     
     if expr[index] == '.':
         token += expr[index]
-        return state_float_dot(expr, index + 1, tokens, parentheses, token)
+        return estadoPonto(expr, index + 1, tokens, parentheses, token)
 
     if expr[index] in ' )':
         tokens.append(Token(INT, int(token)))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_word_with_number(expr, index, tokens, parentheses, token):
+def estadoPalavraComNumero(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_':
-        return state_word_with_number(expr, index + 1, tokens, parentheses, token + expr[index])
+        return estadoPalavraComNumero(expr, index + 1, tokens, parentheses, token + expr[index])
     
     if expr[index] in ' )':
         tokens.append(Token(VARIABLE, token))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_word(expr, index, tokens, parentheses, token):
+def estadoPalavra(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_':
-        return state_word_with_number(expr, index + 1, tokens, parentheses, token + expr[index])
+        return estadoPalavraComNumero(expr, index + 1, tokens, parentheses, token + expr[index])
 
     if expr[index] in ' )':
         tokens.append(Token(VARIABLE, token))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_keyword_R(expr, index, tokens, parentheses, token):
+def estadoKeywordR(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] == 'E':
-        return state_keyword_RE(expr, index + 1, tokens, parentheses, token + expr[index])
+        return estadoKeywordRE(expr, index + 1, tokens, parentheses, token + expr[index])
 
     if expr[index] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_':
-        return state_word_with_number(expr, index + 1, tokens, parentheses, token + expr[index])
+        return estadoPalavraComNumero(expr, index + 1, tokens, parentheses, token + expr[index])
 
     if expr[index] in ' )':
         tokens.append(Token(VARIABLE, token))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_keyword_RE(expr, index, tokens, parentheses, token):
+def estadoKeywordRE(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] == 'S':
-        return state_keyword_RES(expr, index + 1, tokens, parentheses, token + expr[index])
+        return estadoKeywordRES(expr, index + 1, tokens, parentheses, token + expr[index])
 
     if expr[index] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_':
-        return state_word_with_number(expr, index + 1, tokens, parentheses, token + expr[index])
+        return estadoPalavraComNumero(expr, index + 1, tokens, parentheses, token + expr[index])
 
     if expr[index] in ' )':
         tokens.append(Token(VARIABLE, token))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_keyword_RES(expr, index, tokens, parentheses, token):
+def estadoKeywordRES(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] in 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_':
-        return state_word_with_number(expr, index + 1, tokens, parentheses, token + expr[index])
+        return estadoPalavraComNumero(expr, index + 1, tokens, parentheses, token + expr[index])
 
     if expr[index] in ' )':
         tokens.append(Token(KEYWORD, KEYWORD_RES))
-        return state_parentheses(expr, index, tokens, parentheses)
+        return estadoParenteses(expr, index, tokens, parentheses)
 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def state_dangling_minus(expr, index, tokens, parentheses, token):
+def estadoMenosSolto(expr, index, tokens, parentheses, token):
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
     if expr[index] in "0123456789":
-        return state_int(expr, index + 1, tokens, parentheses, token + expr[index])
+        return estadoInteiro(expr, index + 1, tokens, parentheses, token + expr[index])
 
-    return state_single_operand(expr, index, tokens, parentheses, token)
+    return estadoOperadorUnico(expr, index, tokens, parentheses, token)
 
-
-def state_parentheses(expr, index, tokens, parentheses):
+# Estado de parenteses (expressão / indice atual / o array de tokens encontrado / equilíbrio de parênteses)
+def estadoParenteses(expr, index, tokens, parentheses):
+    # Se a expressão acabar, então a expressão não acabou em um estado aceitável, então erro.
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
+    # Se for espaço, ignore e vá pro próximo indice
     if expr[index] == ' ':
-        return state_parentheses(expr, index + 1, tokens, parentheses)
+        return estadoParenteses(expr, index + 1, tokens, parentheses)
 
+    # Se for abre parenteses, vá para o estado de abertura de parênteses e incremente 
+    # um parentese de abertura a mais, além de adiconar o parentese anterior aos tokens
     if expr[index] == '(':
         tokens.append(Token(PARENTHESES,PARENTHESES_L))
-        return state_parentheses(expr, index + 1, tokens, parentheses + 1)
+        return estadoParenteses(expr, index + 1, tokens, parentheses + 1)
 
+    # Se for um número, entrar em estado numérico
     if expr[index] in "0123456789":
-        return state_int(expr, index + 1, tokens, parentheses, expr[index])
+        return estadoInteiro(expr, index + 1, tokens, parentheses, expr[index])
 
+    # Se for R vai para o estado R[ES]
     if expr[index] == "R":
-        return state_keyword_R(expr, index + 1, tokens, parentheses, expr[index])
+        return estadoKeywordR(expr, index + 1, tokens, parentheses, expr[index])
 
+    # Se for letra ou _ vai para o estado de palavra
     if expr[index] in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_":
-        return state_word(expr, index + 1, tokens, parentheses, expr[index])
+        return estadoPalavra(expr, index + 1, tokens, parentheses, expr[index])
 
+    # Se for um ponto, entra direto em estado de float (aceita .número)
     if expr[index] == ".":
-        return state_float_dot(expr, index + 1, tokens, parentheses, '0.')
+        return estadoPonto(expr, index + 1, tokens, parentheses, '0.')
 
+    # Se for um menos, entra em estado de número negativo
     if expr[index] == "-":
-        return state_dangling_minus(expr, index + 1, tokens, parentheses, expr[index])
+        return estadoMenosSolto(expr, index + 1, tokens, parentheses, expr[index])
 
+    # Se for operador, entra em estado de operador
     if expr[index] in ['+', '-', '*', '/', '%', '^']:
-        return state_single_operand(expr, index + 1, tokens, parentheses, expr[index])
+        return estadoOperadorUnico(expr, index + 1, tokens, parentheses, expr[index])
     
+    # Se for fecha parênteses e ainda tiver parentese na stack, então entra em estado de 
+    # parenteses com um token de parêntese fecha parenteses menos um token de parentese aberto
     if expr[index] == ')' and parentheses > 1:
         tokens.append(Token(PARENTHESES, PARENTHESES_R))
-        return state_parentheses(expr, index + 1, tokens, parentheses - 1)
+        return estadoParenteses(expr, index + 1, tokens, parentheses - 1)
 
+    # Se for fecha parêntese e tiver somente um parêntese na stack, então o estado vai para estado
+    # de fim de expressão com um token de parêntese a mais.
     if expr[index] == ')' and parentheses == 1:
         tokens.append(Token(PARENTHESES, PARENTHESES_R))
-        return state_end(expr, index + 1, tokens)
+        return estadoFim(expr, index + 1, tokens)
     
+    # Se não for nada acima, estado de erro por caractere não reconhecido 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def parse_expression(expr, index = 0):
+# Início do estado principal (expressão inteira / indice ativo)
+def parseExpressao(expr, index = 0):
+    # Se a expressão acabar, então a expressão não acabou em um estado aceitável, então erro.
     if index == len(expr):
         raise Exception('Expressão inacabada.')
 
+    # Se for espaço, ignore e vá pro próximo indice
     if expr[index] == ' ':
-        return parse_expression(expr, index + 1)
+        return parseExpressao(expr, index + 1)
     
+    # Se for abre parenteses, vá para o estado de abertura de parênteses
     if expr[index] == '(':
-        return state_parentheses(expr, index, [], 0)
+        return estadoParenteses(expr, index, [], 0)
     
+    # Se for # entra em estado de comentário
     if expr[index] == '#':
-        return state_comment(expr, index, [])
+        return estadoComentario(expr, index, [])
         
+    # Se não for nada acima, estado de erro por caractere não reconhecido 
     raise Exception(f"Caractere não reconhecido '{expr[index]}'")
 
-def parse_expression_list(expressions):
-    return [v for v in [parse_expression(expression) for expression in expressions] if len(v) > 0]
+def parseListaExpressao(expressions):
+    return [v for v in [parseExpressao(expression) for expression in expressions] if len(v) > 0]
 
-def parse_file(file):
+def parseArquivo(file):
     with open(file, "r", encoding="utf-8") as f:
-        return parse_expression_list([linha.strip() for linha in f if linha.strip()])
+        return parseListaExpressao([linha.strip() for linha in f if linha.strip()])

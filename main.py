@@ -1,29 +1,31 @@
+# Eduardo Zenere de Oliveira - ezenere
+
 import argparse
 import os
 import sys
-from parser import parse_file, parse_expression
-from runner import execute, execute_expression, Memory, History
-from translator import translate_to_arm_v7
-from tester import display_parsed
+from parser import parseArquivo, parseExpressao
+from runner import executar, executarExpressao, Memory, History
+from translator import traduzirParaARMv7
+from tester import exibirParsed
  
  
-def cmd_parse(file):
-    parsed = parse_file(file)
+def comandoParse(file):
+    parsed = parseArquivo(file)
     for expression in parsed:
-        display_parsed(expression)
+        exibirParsed(expression)
         print()
  
  
-def cmd_run(file):
-    parsed = parse_file(file)
-    memory, history = execute(parsed)
+def comandoExecutar(file):
+    parsed = parseArquivo(file)
+    memory, history = executar(parsed)
     print(f'Memória: {memory}')
     print(f'Histórico: {history}')
  
  
-def cmd_translate(file, output):
-    parsed = parse_file(file)
-    code = translate_to_arm_v7(parsed)
+def comandoTraduzir(file, output):
+    parsed = parseArquivo(file)
+    code = traduzirParaARMv7(parsed)
     if output:
         with open(output, 'w', encoding='utf-8') as f:
             f.write(code)
@@ -52,10 +54,10 @@ def cmd_interactive():
             break
  
         try:
-            tokens = parse_expression(linha)
+            tokens = parseExpressao(linha)
             if not tokens:
                 continue
-            execute_expression(tokens, memory, history)
+            executarExpressao(tokens, memory, history)
             if history.heap:
                 print(f'= {history.heap[-1]}')
         except Exception as e:
@@ -93,8 +95,8 @@ if __name__ == '__main__':
         sys.exit(1)
  
     if args.parse:
-        cmd_parse(args.file)
+        comandoParse(args.file)
     elif args.run:
-        cmd_run(args.file)
+        comandoExecutar(args.file)
     elif args.translate:
-        cmd_translate(args.file, args.output)
+        comandoTraduzir(args.file, args.output)

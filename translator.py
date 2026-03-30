@@ -2,7 +2,7 @@ import argparse, struct, os, sys
 from common import *
 from parser import *
 
-def number_to_arm_v7(number):
+def numeroParaARMv7(number):
     raw = struct.pack('>d', float(number))
     hi, lo = struct.unpack(">II", raw)
 
@@ -17,17 +17,17 @@ def number_to_arm_v7(number):
     VMOV d0, r0, r1
 """
 
-add_to_memory_list = f"""
+adicionarParaAListaDaMemoria = f"""
     @ Adicionar para a memória
     BL   memory_push
 """
 
-get_one_number = """
+pegarUmNumero = """
     @ Coloca a memória em d0
     BL   memory_pop
 """
 
-get_two_numbers = """
+pegarDoisNumeros = """
     @ Coloca a memória em D0
     BL   memory_pop
 
@@ -38,12 +38,26 @@ get_two_numbers = """
     BL  memory_pop
 """
 
-res_keyword = """
-    BL  rescue
+def keywordRES(nRES):
+    data = f"""
+    LDR             r0, ={nRES}
+    SUB             r1, r1, r0
+""" if nRES > 0 else ""
+
+    return f"""
+    BL              memory_pop
+    VCVT.S32.F64    s0, d0
+    VMOV            r1, s0
+    {data}
+    MOV             r0, r11
+    LSL             r1, r1, #3  @ Multiplica por 8 (desloca 3 bits para a esquerda, dá no mesmo)
+    SUB             r0, r0, r1
+    VLDR            d0, [r0]
+    BX              lr
     BL  memory_push
 """
 
-def math_operation(operation):
+def operacaoMatematica(operation):
     diretas = {
         MATH_PLUS: "ADD",
         MATH_MINUS: "SUB",
@@ -68,37 +82,38 @@ def math_operation(operation):
     BL  fpow
 """
 
-def set_value_on_address(address):
+def definirValorNoEndereco(address):
     return f"""
     LDR     r0, =0x{address:08X}    @ Colocar o valor do endereço no registrador r0
     VSTR    d0, [r0]                @ Mover o valor do registrador d0 para o endereço em r0 (8 bytes)
 """
 
-def get_value_on_address(address):
+def pegarValorNoEndereco(address):
     return f"""
     LDR     r0, =0x{address:08X}    @ Colocar o valor do endereço no registrador r0
     VLDR    d0, [r0]                @ Ler o valor do edereço em r0 para d0 (8 bytes)
 """
 
-def translate_to_arm_v7(parsed):
+def traduzirParaARMv7(parsed):
     middle_code = ""
     variable_address = 0x00010000
     variables = {}
 
     for expression in parsed:
+        vezesRes = 0
         for i in range(len(expression)):
             token = expression[i]
             if token.kind == PARENTHESES:
                 continue
             if token.kind == INT or token.kind == FLOAT:
                 # Adiciona número na pilha de variáveis
-                middle_code += number_to_arm_v7(token.value)
-                middle_code += add_to_memory_list
+                middle_code += numeroParaARMv7(token.value)
+                middle_code += adicionarParaAListaDaMemoria
 
             if token.kind == MATH:
-                middle_code += get_two_numbers
-                middle_code += math_operation(token.value)
-                middle_code += add_to_memory_list
+                middle_code += pegarDoisNumeros
+                middle_code += operacaoMatematica(token.value)
+                middle_code += adicionarParaAListaDaMemoria
             if token.kind == VARIABLE:
                 if i == len(expression) - 2: # Penultimo item, significa que é uma atribuição ou uma leitura. O ultimo token sempre é ")".
                     if len(expression) > 3:
@@ -108,28 +123,29 @@ def translate_to_arm_v7(parsed):
                             variables[token.value] = variable_address
 
                         current_address = variables[token.value]
-                        middle_code += get_one_number
-                        middle_code += set_value_on_address(current_address)
-                        middle_code += add_to_memory_list
+                        middle_code += pegarUmNumero
+                        middle_code += definirValorNoEndereco(current_address)
+                        middle_code += adicionarParaAListaDaMemoria
                     else:
                         # Não tem item na pilha de atribuição, então é apenas leitura
                         # Em assembly, se a variável existir, ela será apenas inserida na pilha de resultados, 
                         # se não existir, o valor 0 é inserido na pilha.
                         if token.value not in variables:
-                            middle_code += number_to_arm_v7(0)
+                            middle_code += numeroParaARMv7(0)
                         else:
-                            middle_code += get_value_on_address(variables[token.value])
-                        middle_code += add_to_memory_list
+                            middle_code += pegarValorNoEndereco(variables[token.value])
+                        middle_code += adicionarParaAListaDaMemoria
                 else:
                     if token.value not in variables:
-                        middle_code += number_to_arm_v7(0)
+                        middle_code += numeroParaARMv7(0)
                     else:
-                        middle_code += get_value_on_address(variables[token.value])
-                    middle_code += add_to_memory_list
+                        middle_code += pegarValorNoEndereco(variables[token.value])
+                    middle_code += adicionarParaAListaDaMemoria
 
             if token.kind == KEYWORD:
                 if(token.value == KEYWORD_RES):
-                    middle_code += res_keyword
+                    middle_code += keywordRES(vezesRes)
+                    vezesRes += 1
 
     return f"""
 @ Endereço base da memória de pilha de resultados
@@ -183,18 +199,6 @@ fmod:
     VSUB.F64        d0, d0, d2
     BX              lr
 
-rescue:
-    PUSH            {{lr}}
-    BL              memory_pop
-    POP             {{lr}}
-    VCVT.S32.F64    s0, d0
-    VMOV            r1, s0
-    MOV             r0, r11
-    LSL             r1, r1, #3  @ Multiplica por 8 (desloca 3 bits para a esquerda, dá no mesmo)
-    SUB             r0, r0, r1
-    VLDR            d0, [r0]
-    BX              lr
-
 fpow:
     VMOV.F64     d2, d0          @ d2 = base (salva)
     VCVT.S32.F64 s0, d1          @ s0 = expoente como inteiro
@@ -226,7 +230,7 @@ if __name__ == '__main__':
         print("Erro: o arquivo não existe!")
         sys.exit(1)
 
-    parsed = parse_file(args.file)
-    code = translate_to_arm_v7(parsed)
+    parsed = parseArquivo(args.file)
+    code = traduzirParaARMv7(parsed)
 
     print(code)

@@ -1,7 +1,7 @@
 import argparse, os, sys
 from common import *
-from parser import parse_file
-from runner import execute_expression, Memory, History
+from parser import parseArquivo
+from runner import executarExpressao, Memory, History
 
 # ── Cores ANSI ──────────────────────────────────────────────────
 RESET  = '\033[0m'
@@ -28,7 +28,7 @@ MATH_NAMES = {
 
 
 # ── Reconstruir expressão original a partir dos tokens ──────────
-def reconstruct(tokens):
+def reconstruir(tokens):
     parts = []
     for token in tokens:
         if token.kind == PARENTHESES:
@@ -57,7 +57,7 @@ def reconstruct(tokens):
 
 
 # ── Display de tokens (parse tree) ─────────────────────────────
-def display_parsed(parsed):
+def exibirParsed(parsed):
     espacos = ''
     for token in parsed:
         if token.kind == PARENTHESES:
@@ -85,7 +85,7 @@ def display_parsed(parsed):
 
 
 # ── Formatar valor de saída ────────────────────────────────────
-def fmt_value(v):
+def formatarValor(v):
     if isinstance(v, float):
         if v == float('inf'):
             return 'inf'
@@ -99,32 +99,32 @@ def fmt_value(v):
 
 
 # ── Linha separadora ──────────────────────────────────────────
-def separator(char='─', width=60):
+def separador(char='─', width=60):
     print(f'{DIM}{char * width}{RESET}')
 
 
 # ── Executar e exibir linha a linha ────────────────────────────
-def run_verbose(parsed):
+def executarDebugando(parsed):
     memory = Memory()
     history = History()
     total = len(parsed)
     max_digits = len(str(total))
 
-    separator('═')
+    separador('═')
     print(f'{BOLD}  Execução ({total} expressões){RESET}')
-    separator('═')
+    separador('═')
     print()
 
     for idx, expression in enumerate(parsed):
         num = str(idx + 1).rjust(max_digits)
-        expr_str = reconstruct(expression)
+        expr_str = reconstruir(expression)
         prev_len = len(history.heap)
 
-        execute_expression(expression, memory, history)
+        executarExpressao(expression, memory, history)
 
         if len(history.heap) > prev_len:
             result = history.heap[-1]
-            result_str = fmt_value(result)
+            result_str = formatarValor(result)
             print(f'  {DIM}{num}{RESET} │ {expr_str}')
             print(f'  {" " * max_digits} │ {GREEN}= {BOLD}{result_str}{RESET}')
         else:
@@ -136,36 +136,36 @@ def run_verbose(parsed):
 
 
 # ── Exibir memória ─────────────────────────────────────────────
-def show_memory(memory):
+def exibirMemoria(memory):
     if not memory.dict:
         return
     print()
-    separator('═')
+    separador('═')
     print(f'{BOLD}  Variáveis em Memória{RESET}')
-    separator('─')
+    separador('─')
 
     max_key = max(len(k) for k in memory.dict)
     for name, value in sorted(memory.dict.items()):
-        print(f'  {GREEN}{name.ljust(max_key)}{RESET} │ {BOLD}{fmt_value(value)}{RESET}')
+        print(f'  {GREEN}{name.ljust(max_key)}{RESET} │ {BOLD}{formatarValor(value)}{RESET}')
 
-    separator('═')
+    separador('═')
 
 
 # ── Exibir histórico ──────────────────────────────────────────
-def show_history(history):
+def exibirHistorico(history):
     if not history.heap:
         return
     print()
-    separator('═')
+    separador('═')
     print(f'{BOLD}  Histórico de Resultados ({len(history.heap)} entradas){RESET}')
-    separator('─')
+    separador('─')
 
     max_digits = len(str(len(history.heap)))
     for i, value in enumerate(history.heap):
         num = str(i).rjust(max_digits)
-        print(f'  {DIM}{num}{RESET} │ {fmt_value(value)}')
+        print(f'  {DIM}{num}{RESET} │ {formatarValor(value)}')
 
-    separator('═')
+    separador('═')
 
 
 # ── Main ───────────────────────────────────────────────────────
@@ -186,26 +186,26 @@ if __name__ == '__main__':
         print(f'{RED}Erro: o arquivo "{args.file}" não existe!{RESET}')
         sys.exit(1)
 
-    parsed = parse_file(args.file)
+    parsed = parseArquivo(args.file)
 
     if args.tokens:
-        separator('═')
+        separador('═')
         print(f'{BOLD}  Tokens{RESET}')
-        separator('═')
+        separador('═')
         for i, expression in enumerate(parsed):
             print(f'\n  {DIM}Expressão {i + 1}:{RESET}')
-            display_parsed(expression)
+            exibirParsed(expression)
         print()
 
-    memory, history = run_verbose(parsed)
+    memory, history = executarDebugando(parsed)
 
     if args.memory:
-        show_memory(memory)
+        exibirMemoria(memory)
 
     if args.history:
-        show_history(history)
+        exibirHistorico(history)
 
     if not args.memory and not args.history:
-        show_memory(memory)
+        exibirMemoria(memory)
 
     print()
